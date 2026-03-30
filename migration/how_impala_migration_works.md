@@ -323,50 +323,99 @@ MSCK REPAIR TABLE sales;
 
 ## 5. Production Workflow
 
-#### The Recommended Pipeline
+A real production Impala migration system operates in **two phases** that are clearly separated:
+
+### Phase 0: One-Time Table Setup (Run Once Per Table)
+
+This happens before any data lands. You **must** create the table first, or there is nowhere for the partition metadata to live.
+
+```sql
+-- Step 0A: Create the base directory in HDFS (if not pre-created by ETL)
+hdfs dfs -mkdir -p /data/sales/
+
+-- Step 0B: Create the table in Impala / Hive Metastore
+CREATE TABLE IF NOT EXISTS sales (
+    id          INT,
+    amount      DECIMAL(10,2),
+    region      STRING,
+    txn_time    TIMESTAMP
+)
+PARTITIONED BY (cob_dt_id INT)
+STORED AS PARQUET
+LOCATION '/data/sales/';
+
+-- Step 0C: Invalidate Impala's global cache to make the new table visible
+INVALIDATE METADATA sales;
+```
+
+**What happens internally:**
+1. `CREATE TABLE` registers the schema in the Hive Metastore. No partitions exist yet.
+2. HDFS creates the base directory `/data/sales/` (or confirms it exists).
+3. `INVALIDATE METADATA` forces Impala to reload its catalog — without this, queries on the new table may fail.
+
+---
+
+### Phase 1: Daily Data Ingestion (Runs Per Batch / Per Partition)
+
+Once the table exists, every new partition follows this pipeline:
 
 ```
- ┌──────────────────────────────────────────────────────────────┐
- │                 DATA INGESTION PIPELINE                      │
- │                                                              │
- │  Step 1: Write Parquet Files                                 │
- │  ─────────────────────────                                   │
- │  ETL/Spark job writes files to HDFS:                        │
- │    hdfs dfs -put data.parquet                                │
- │      /data/sales/cob_dt_id=20260330/                        │
- │                    │                                         │
- │                    ▼                                         │
- │  Step 2: Register Partition                                  │
- │  ──────────────────────                                      │
- │  ALTER TABLE sales ADD IF NOT EXISTS                         │
- │    PARTITION (cob_dt_id=20260330)                            │
- │    LOCATION '/data/sales/cob_dt_id=20260330';               │
- │                    │                                         │
- │                    ▼                                         │
- │  Step 3: Sync Impala Cache                                   │
- │  ─────────────────────                                       │
- │  REFRESH sales PARTITION (cob_dt_id=20260330);              │
- │                    │                                         │
- │                    ▼                                         │
- │  Step 4: Update Statistics (optional, batch preferred)       │
- │  ─────────────────────────────────────────────               │
- │  COMPUTE INCREMENTAL STATS sales                             │
- │    PARTITION (cob_dt_id=20260330);                           │
- │                    │                                         │
- │                    ▼                                         │
- │  ✅ Partition is queryable with optimal performance          │
- │                                                              │
- └──────────────────────────────────────────────────────────────┘
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │               FULL PRODUCTION INGESTION PIPELINE                    │
+ │                                                                      │
+ │  ── PHASE 0: One-Time Setup (done once per table) ───────────────── │
+ │                                                                      │
+ │  Step 0: Create Impala Table                                        │
+ │  ──────────────────────────                                          │
+ │  CREATE TABLE IF NOT EXISTS sales (...)                             │
+ │    PARTITIONED BY (cob_dt_id INT)                                   │
+ │    STORED AS PARQUET                                                │
+ │    LOCATION '/data/sales/';                                         │
+ │  INVALIDATE METADATA sales;                                         │
+ │                    │                                                 │
+ │  ── PHASE 1: Per-Batch Ingestion (runs daily / per partition) ────── │
+ │                    │                                                 │
+ │                    ▼                                                 │
+ │  Step 1: Write Parquet Files to HDFS                                │
+ │  ────────────────────────────────                                    │
+ │  ETL / Spark job produces and writes files:                         │
+ │    hdfs dfs -put part-00000.parquet                                 │
+ │      /data/sales/cob_dt_id=20260330/                               │
+ │                    │                                                 │
+ │                    ▼                                                 │
+ │  Step 2: Register Partition in Metastore                            │
+ │  ────────────────────────────────────                                │
+ │  ALTER TABLE sales ADD IF NOT EXISTS                                │
+ │    PARTITION (cob_dt_id=20260330)                                   │
+ │    LOCATION '/data/sales/cob_dt_id=20260330';                      │
+ │                    │                                                 │
+ │                    ▼                                                 │
+ │  Step 3: Sync Impala File Cache                                     │
+ │  ─────────────────────────────                                       │
+ │  REFRESH sales PARTITION (cob_dt_id=20260330);                     │
+ │                    │                                                 │
+ │                    ▼                                                 │
+ │  Step 4: Compute Stats (optional, batch preferred)                  │
+ │  ─────────────────────────────────────────────────                   │
+ │  COMPUTE INCREMENTAL STATS sales                                    │
+ │    PARTITION (cob_dt_id=20260330);                                  │
+ │                    │                                                 │
+ │                    ▼                                                 │
+ │  ✅ Partition is registered, cached, and queryable                  │
+ │                                                                      │
+ └─────────────────────────────────────────────────────────────────────┘
 ```
 
 #### Why This Order Matters
 
-| Step | If Skipped | Impact |
-|------|-----------|--------|
-| **Write files** | No data exists | Cannot query anything |
-| **ADD PARTITION** | Metastore doesn't know about it | Impala returns 0 rows |
-| **REFRESH** | Impala cache is stale | May return partial/old data |
-| **COMPUTE STATS** | No optimization statistics | Queries work but may be slow |
+| Phase | Step | If Skipped | Impact |
+|-------|------|-----------|--------|
+| **Setup** | **CREATE TABLE** | No table definition exists | `ADD PARTITION` fails — no table to attach to |
+| **Setup** | **INVALIDATE METADATA** | Impala is unaware of the new table | Queries fail with "table not found" |
+| **Ingestion** | **Write files** | No data in HDFS | `REFRESH` shows 0 files, queries return nothing |
+| **Ingestion** | **ADD PARTITION** | Metastore doesn't know partition exists | Impala returns 0 rows even though files are on disk |
+| **Ingestion** | **REFRESH** | Impala cache is stale | May return partial or 0 results |
+| **Ingestion** | **COMPUTE STATS** | No optimizer statistics | Queries work, but may be poorly optimized |
 
 ---
 
@@ -374,13 +423,15 @@ MSCK REPAIR TABLE sales;
 
 Think of it as **opening a bookstore:**
 
-| Step | Bookstore Analogy | Impala Equivalent |
-|------|-------------------|-------------------|
-| 1 | Place books on shelves | Write Parquet to HDFS |
-| 2 | Add books to the catalog system | `ALTER TABLE ADD PARTITION` |
-| 3 | Tell the staff where the new books are | `REFRESH PARTITION` |
-| 4 | Update the "most popular" / "recommended" lists | `COMPUTE INCREMENTAL STATS` |
-| 🆘 | Scan entire store to find uncatalogued books | `MSCK REPAIR TABLE` |
+| Phase | Step | Bookstore Analogy | Impala Equivalent |
+|-------|------|-------------------|-------------------|
+| **Setup** | 0 | Design the store's categorization system | `CREATE TABLE … PARTITIONED BY` |
+| **Setup** | 0 | Tell staff the store layout | `INVALIDATE METADATA` |
+| **Ingestion** | 1 | Place books on the assigned shelves | Write Parquet files to HDFS |
+| **Ingestion** | 2 | Add books to the catalog system | `ALTER TABLE ADD PARTITION` |
+| **Ingestion** | 3 | Tell staff where the new books are | `REFRESH PARTITION` |
+| **Ingestion** | 4 | Update recommended/bestseller lists | `COMPUTE INCREMENTAL STATS` |
+| **Emergency** | – | Scan entire store to find uncatalogued books | `MSCK REPAIR TABLE` |
 
 #### The Layer Responsibility Matrix
 
@@ -472,18 +523,58 @@ The HDFS directory path **must** match the partition schema exactly:
 
 ---
 
-#### Pattern 4: Multi-Partition Pipeline (Real-World ETL)
+#### Pattern 4: Full Production Pipeline (Python)
+
+A complete `ImpalaDataMigrator` class that handles both table setup and per-partition ingestion:
 
 ```python
 """
-Production-grade partition management pipeline.
+Production-grade Impala migration system.
+Handles both one-time table setup and recurring partition ingestion.
 """
 
 from impala.dbapi import connect
 
-class ImpalaPartitionManager:
+
+class ImpalaDataMigrator:
     def __init__(self, host: str, port: int = 21050):
         self.conn = connect(host=host, port=port)
+
+    # ─── PHASE 0: One-Time Table Setup ────────────────────────────────────
+
+    def ensure_table(self, table: str, hdfs_base: str) -> None:
+        """
+        Create the Impala table if it doesn't exist.
+        Must be called BEFORE any partition or data operations.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute(f"""
+            CREATE TABLE IF NOT EXISTS {table} (
+                id           INT,
+                amount       DECIMAL(10, 2),
+                region       STRING,
+                txn_time     TIMESTAMP
+            )
+            PARTITIONED BY (cob_dt_id INT)
+            STORED AS PARQUET
+            LOCATION '{hdfs_base}'
+        """)
+        print(f"  ✓ Table '{table}' is ready (created or already exists)")
+
+        # Force Impala to acknowledge the new table in its catalog
+        cursor.execute(f"INVALIDATE METADATA {table}")
+        print(f"  ✓ Metadata invalidated — Impala catalog is up to date")
+        cursor.close()
+
+    def add_column(self, table: str, column_name: str, column_type: str) -> None:
+        """Evolve the schema by adding a column (lazy migration — only affects Metastore)."""
+        cursor = self.conn.cursor()
+        cursor.execute(f"ALTER TABLE {table} ADD COLUMNS ({column_name} {column_type})")
+        print(f"  ✓ Column '{column_name} {column_type}' added to '{table}'")
+        print(f"    ⚠  Existing Parquet files will return NULL for this column")
+        cursor.close()
+
+    # ─── PHASE 1: Per-Partition Ingestion ─────────────────────────────────
 
     def ingest_partition(
         self,
@@ -493,10 +584,13 @@ class ImpalaPartitionManager:
         hdfs_path: str,
         compute_stats: bool = False,
     ) -> None:
-        """Full partition ingestion pipeline."""
+        """
+        Register a newly written HDFS partition and sync Impala's cache.
+        Call ensure_table() before the first call to this method.
+        """
         cursor = self.conn.cursor()
 
-        # Step 1: Register partition (idempotent)
+        # Step 1: Register partition metadata in Hive Metastore (idempotent)
         cursor.execute(f"""
             ALTER TABLE {table}
             ADD IF NOT EXISTS PARTITION ({partition_key}={partition_value})
@@ -504,13 +598,13 @@ class ImpalaPartitionManager:
         """)
         print(f"  ✓ Partition registered: {partition_key}={partition_value}")
 
-        # Step 2: Refresh Impala cache
+        # Step 2: Sync Impala's file-level cache for this partition
         cursor.execute(f"""
             REFRESH {table} PARTITION ({partition_key}={partition_value})
         """)
-        print(f"  ✓ Cache refreshed")
+        print(f"  ✓ Impala cache refreshed")
 
-        # Step 3: Compute stats (optional)
+        # Step 3: Compute optimizer statistics (optional)
         if compute_stats:
             cursor.execute(f"""
                 COMPUTE INCREMENTAL STATS {table}
@@ -526,26 +620,35 @@ class ImpalaPartitionManager:
         partition_key: str,
         partitions: list[dict],
     ) -> None:
-        """Bulk ingest multiple partitions."""
+        """Ingest multiple partitions and batch-compute stats at the end."""
         for partition in partitions:
             self.ingest_partition(
                 table=table,
                 partition_key=partition_key,
                 partition_value=partition["value"],
                 hdfs_path=partition["path"],
-                compute_stats=False,  # Defer to batch
+                compute_stats=False,    # Defer — compute once at the end
             )
 
-        # Batch stats computation at the end
+        # Batch stats computation: only recomputes partitions that changed
         cursor = self.conn.cursor()
         cursor.execute(f"COMPUTE INCREMENTAL STATS {table}")
         cursor.close()
-        print(f"  ✓ Batch stats computed for {table}")
+        print(f"  ✓ Batch stats computed for all modified partitions in '{table}'")
 
 
-# Usage
-manager = ImpalaPartitionManager(host="impala-host.company.com")
-manager.bulk_ingest(
+# ─── Usage ────────────────────────────────────────────────────────────────
+
+migrator = ImpalaDataMigrator(host="impala-host.company.com")
+
+# Phase 0: One-time setup (idempotent — safe to run on every deploy)
+migrator.ensure_table(
+    table="sales",
+    hdfs_base="/data/sales/",
+)
+
+# Phase 1: Daily ingestion pipeline
+migrator.bulk_ingest(
     table="sales",
     partition_key="cob_dt_id",
     partitions=[
@@ -608,11 +711,13 @@ Despite operating in different worlds, both systems share core principles:
 
 ### For Data Migrations (Impala + HDFS)
 
-1. **Avoid `MSCK REPAIR TABLE`** — it's an O(N) footgun at scale.
-2. **Use `ADD PARTITION` explicitly** — deterministic, O(1), and production-grade.
-3. **Always `REFRESH`** after external writes — ensures query cache consistency.
-4. **Batch `COMPUTE STATS`** — useful but expensive; defer to periodic/asynchronous jobs.
-5. **Match partition paths exactly** — avoid case or naming mismatches to prevent silent data loss in queries.
+1. **Create the table first** — `ADD PARTITION` will fail if the table doesn't exist in the Metastore.
+2. **`INVALIDATE METADATA` after DDL** — required after `CREATE TABLE` to make Impala aware of the new table.
+3. **Avoid `MSCK REPAIR TABLE`** — it's an O(N) footgun at scale.
+4. **Use `ADD PARTITION` explicitly** — deterministic, O(1), and production-grade.
+5. **Always `REFRESH`** after external writes — ensures query cache consistency.
+6. **Batch `COMPUTE STATS`** — useful but expensive; defer to periodic/asynchronous jobs.
+7. **Match partition paths exactly** — avoid case or naming mismatches to prevent silent data loss in queries.
 
 ### The Universal Big Data Truth
 
