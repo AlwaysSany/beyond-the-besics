@@ -16,12 +16,13 @@ For a broader look at database migrations and schema management (like Alembic), 
 
 1. [Architecture Overview](#1-architecture-overview)
 2. [The Three Layers](#2-the-three-layers)
-3. [Core Commands Deep Dive](#3-core-commands-deep-dive)
-4. [Production Workflow](#4-production-workflow)
-5. [Mental Model](#5-mental-model)
-6. [Advanced Production Patterns](#6-advanced-production-patterns)
-7. [Comparing the Two Worlds](#7-comparing-the-two-worlds)
-8. [Key Takeaways](#8-key-takeaways)
+3. [Base Table & Schema Management (DDL)](#3-base-table--schema-management-ddl)
+4. [Core Commands Deep Dive](#4-core-commands-deep-dive)
+5. [Production Workflow](#5-production-workflow)
+6. [Mental Model](#6-mental-model)
+7. [Advanced Production Patterns](#7-advanced-production-patterns)
+8. [Comparing the Two Worlds](#8-comparing-the-two-worlds)
+9. [Key Takeaways](#9-key-takeaways)
 
 ---
 
@@ -103,7 +104,58 @@ Impala Cache State:
 
 ---
 
-## 3. Core Commands Deep Dive
+## 3. Base Table & Schema Management (DDL)
+
+While partition management handles the **data**, DDL commands handle the **structure** of the table itself.
+
+### 3.1 CREATE TABLE (The Foundation)
+
+Defining a table in Impala requires specifying the storage format and the partition keys.
+
+```sql
+CREATE TABLE sales (
+    id INT,
+    amount DECIMAL(10,2),
+    transaction_time TIMESTAMP
+)
+PARTITIONED BY (cob_dt_id INT)
+STORED AS PARQUET
+LOCATION '/data/sales/';
+```
+
+**What happens internally:**
+1.  **Metastore**: Creates a new entry in the `TBLS` table and defines the columns in `COLUMNS_V2`.
+2.  **HDFS**: Creates the base directory `/data/sales/` if it doesn't exist.
+3.  **Impala**: Invalidates its global metadata cache to acknowledge the new table.
+
+### 3.2 ALTER TABLE (Evolving the Schema)
+
+Schema migration in Impala is "lazy." Changing the schema in the Metastore does not rewrite existing Parquet files.
+
+#### Adding Columns
+```sql
+ALTER TABLE sales ADD COLUMNS (customer_id STRING, region_code INT);
+```
+- **Behavior**: New columns are added to the Metastore.
+- **Data Impact**: Existing Parquet files will return `NULL` for these new columns until they are overwritten or updated.
+
+#### Dropping/Changing Columns
+```sql
+ALTER TABLE sales REPLACE COLUMNS (id INT, amount DECIMAL(12,2));
+```
+- **CAUTION**: `REPLACE COLUMNS` removes all existing column definitions and replaces them with the new set. Any columns NOT in the new list are effectively dropped from the schema.
+
+### 3.3 Internal Schema vs. Parquet Schema
+
+One of the most common pitfalls in Impala migration is the mismatch between:
+1.  **Metastore Schema**: What Impala *thinks* the table looks like.
+2.  **File Schema**: What the `.parquet` file *actually* contains.
+
+If they mismatch, Impala attempts to resolve by name or position depending on settings, but missing columns in the file will always result in `NULL`.
+
+---
+
+## 4. Core Commands Deep Dive
 
 #### Command 1: `ALTER TABLE ... ADD PARTITION`
 
@@ -269,7 +321,7 @@ MSCK REPAIR TABLE sales;
 
 ---
 
-## 4. Production Workflow
+## 5. Production Workflow
 
 #### The Recommended Pipeline
 
@@ -318,7 +370,7 @@ MSCK REPAIR TABLE sales;
 
 ---
 
-## 5. Mental Model
+## 6. Mental Model
 
 Think of it as **opening a bookstore:**
 
@@ -341,7 +393,7 @@ Think of it as **opening a bookstore:**
 
 ---
 
-## 6. Advanced Production Patterns
+## 7. Advanced Production Patterns
 
 #### Pattern 1: Idempotent Pipeline
 
@@ -506,7 +558,7 @@ manager.bulk_ingest(
 
 ---
 
-## 7. Comparing the Two Worlds
+## 8. Comparing the Two Worlds
 
 | Aspect | Schema Migration (Alembic) | Data/Partition Migration (Impala) |
 |--------|---------------------------|----------------------------------|
@@ -552,7 +604,7 @@ Despite operating in different worlds, both systems share core principles:
 └─────────────────────────────────────────────────┘
 ```
 
-## 8. Key Takeaways
+## 9. Key Takeaways
 
 ### For Data Migrations (Impala + HDFS)
 
