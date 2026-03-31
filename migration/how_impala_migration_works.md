@@ -32,16 +32,16 @@ In the **Impala + HDFS (Parquet)** world, "migration" means something different.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     QUERY LAYER                                  │
-│                                                                  │
+│                     QUERY LAYER                                 │
+│                                                                 │
 │   ┌───────────┐    ┌─────────────────┐    ┌──────────────────┐  │
 │   │  Impala   │───▶│  Hive Metastore │───▶│      HDFS        │  │
 │   │  Daemon   │    │  (Metadata DB)  │    │  (Parquet Files) │  │
 │   └───────────┘    └─────────────────┘    └──────────────────┘  │
-│        │                    │                       │            │
+│        │                    │                       │           │
 │   Query Cache         Table/Partition          Actual Data      │
-│   File Metadata       Metadata               (Columnar Files)  │
-│                                                                  │
+│   File Metadata       Metadata               (Columnar Files)   │
+│                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -362,47 +362,47 @@ Once the table exists, every new partition follows this pipeline:
 ```
  ┌─────────────────────────────────────────────────────────────────────┐
  │               FULL PRODUCTION INGESTION PIPELINE                    │
- │                                                                      │
+ │                                                                     │
  │  ── PHASE 0: One-Time Setup (done once per table) ───────────────── │
- │                                                                      │
+ │                                                                     │
  │  Step 0: Create Impala Table                                        │
- │  ──────────────────────────                                          │
+ │  ──────────────────────────                                         │
  │  CREATE TABLE IF NOT EXISTS sales (...)                             │
  │    PARTITIONED BY (cob_dt_id INT)                                   │
  │    STORED AS PARQUET                                                │
  │    LOCATION '/data/sales/';                                         │
  │  INVALIDATE METADATA sales;                                         │
- │                    │                                                 │
- │  ── PHASE 1: Per-Batch Ingestion (runs daily / per partition) ────── │
- │                    │                                                 │
- │                    ▼                                                 │
+ │                    │                                                │
+ │  ── PHASE 1: Per-Batch Ingestion (runs daily / per partition) ───── │
+ │                    │                                                │
+ │                    ▼                                                │
  │  Step 1: Write Parquet Files to HDFS                                │
- │  ────────────────────────────────                                    │
+ │  ────────────────────────────────                                   │
  │  ETL / Spark job produces and writes files:                         │
  │    hdfs dfs -put part-00000.parquet                                 │
- │      /data/sales/cob_dt_id=20260330/                               │
- │                    │                                                 │
- │                    ▼                                                 │
+ │      /data/sales/cob_dt_id=20260330/                                │
+ │                    │                                                │
+ │                    ▼                                                │
  │  Step 2: Register Partition in Metastore                            │
- │  ────────────────────────────────────                                │
+ │  ────────────────────────────────────                               │
  │  ALTER TABLE sales ADD IF NOT EXISTS                                │
  │    PARTITION (cob_dt_id=20260330)                                   │
- │    LOCATION '/data/sales/cob_dt_id=20260330';                      │
- │                    │                                                 │
- │                    ▼                                                 │
+ │    LOCATION '/data/sales/cob_dt_id=20260330';                       │
+ │                    │                                                │
+ │                    ▼                                                │
  │  Step 3: Sync Impala File Cache                                     │
- │  ─────────────────────────────                                       │
- │  REFRESH sales PARTITION (cob_dt_id=20260330);                     │
- │                    │                                                 │
- │                    ▼                                                 │
+ │  ─────────────────────────────                                      │
+ │  REFRESH sales PARTITION (cob_dt_id=20260330);                      │
+ │                    │                                                │
+ │                    ▼                                                │
  │  Step 4: Compute Stats (optional, batch preferred)                  │
- │  ─────────────────────────────────────────────────                   │
+ │  ─────────────────────────────────────────────────                  │
  │  COMPUTE INCREMENTAL STATS sales                                    │
  │    PARTITION (cob_dt_id=20260330);                                  │
- │                    │                                                 │
- │                    ▼                                                 │
+ │                    │                                                │
+ │                    ▼                                                │
  │  ✅ Partition is registered, cached, and queryable                  │
- │                                                                      │
+ │                                                                     │
  └─────────────────────────────────────────────────────────────────────┘
 ```
 

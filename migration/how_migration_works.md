@@ -49,6 +49,7 @@ Production:   "Everything is on fire. 🔥"
 
 ### The Problems Migrations Solve
 
+┌────────────────────────────────────────────────┐
 | Problem | Without Migrations | With Migrations |
 |---------|--------------------|-----------------|
 | **Consistency** | Each environment has different schemas | Every environment runs the same versioned changes |
@@ -95,9 +96,9 @@ class User(Base):
 Alembic is built on **four core concepts**:
 
 ```
-┌─────────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────────-┐
 │                  ALEMBIC INTERNALS                   │
-├─────────────────────────────────────────────────────┤
+├─────────────────────────────────────────────────────-┤
 │                                                      │
 │  1. Migration Environment (alembic.ini + env.py)     │
 │     └─ Configuration: DB URL, script location, etc.  │
@@ -114,7 +115,7 @@ Alembic is built on **four core concepts**:
 │     └─ Single row in your database                   │
 │     └─ Tracks "current" revision                     │
 │                                                      │
-└─────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────-─┘
 ```
 
 ### How It All Connects
@@ -210,14 +211,14 @@ Migrations form a **Directed Acyclic Graph** (usually a simple linked list):
          │
          ▼
   ┌─────────────┐
-  │  Rev: bbb222 │  "add email column"
-  │  down: aaa111│
+  │ Rev: bbb222 │  "add email column"
+  │ down: aaa111│
   └──────┬──────┘
          │
          ▼
   ┌─────────────┐
-  │  Rev: ccc333 │  "add phone column"
-  │  down: bbb222│
+  │ Rev: ccc333 │  "add phone column"
+  │ down: bbb222│
   └──────┬──────┘
          │
          ▼
@@ -243,7 +244,7 @@ In team environments, two developers might create migrations from the same paren
 
 ```
          ┌─────────────┐
-         │  Rev: aaa111 │
+         │ Rev: aaa111 │
          └──────┬──────┘
                ╱ ╲
               ╱   ╲
@@ -285,21 +286,21 @@ SELECT * FROM alembic_version;
 #### This Is the Entire State Machine
 
 ```
-┌────────────────────────────────────────────────────────┐
+┌────────────────────────────────────────────────────────-┐
 │                    STATE MACHINE                        │
 │                                                         │
-│   alembic_version = "ccc333"                           │
+│   alembic_version = "ccc333"                            │
 │                                                         │
 │   Question: "What migrations need to run?"              │
 │   Answer:   Walk the chain from ccc333 → HEAD           │
 │             If ccc333 IS head → nothing to do           │
-│             If not → execute each upgrade() in order     │
+│             If not → execute each upgrade() in order    │
 │                                                         │
 │   Question: "How to rollback?"                          │
 │   Answer:   Execute ccc333.downgrade()                  │
 │             Set version to bbb222                       │
 │                                                         │
-└────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────-┘
 ```
 
 ---
