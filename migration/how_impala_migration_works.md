@@ -680,9 +680,9 @@ migrator.bulk_ingest(
 Despite operating in different worlds, both systems share core principles:
 
 ```
-┌─────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────┐
 │           SHARED MIGRATION PRINCIPLES            │
-├─────────────────────────────────────────────────┤
+├──────────────────────────────────────────────────┤
 │                                                  │
 │  1. Explicit over implicit                       │
 │     → ADD PARTITION over MSCK REPAIR             │
@@ -694,7 +694,7 @@ Despite operating in different worlds, both systems share core principles:
 │                                                  │
 │  3. Forward and backward                         │
 │     → upgrade() + downgrade()                    │
-│     → ADD PARTITION + DROP PARTITION              │
+│     → ADD PARTITION + DROP PARTITION             │
 │                                                  │
 │  4. Version tracking                             │
 │     → alembic_version table                      │
@@ -704,7 +704,7 @@ Despite operating in different worlds, both systems share core principles:
 │     → Code vs schema vs data                     │
 │     → Storage vs metadata vs cache               │
 │                                                  │
-└─────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────-┘
 ```
 
 ## 9. Key Takeaways
