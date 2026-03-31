@@ -249,15 +249,15 @@ COMPUTE INCREMENTAL STATS sales PARTITION (cob_dt_id=20260330);
 ```
 1. Impala scans partition data to compute:
    ┌──────────────────────────────────────────────┐
-   │  Statistic          │  Value                  │
+   │  Statistic          │  Value                 │
    ├──────────────────────────────────────────────┤
-   │  Row count          │  1,247,893              │
-   │  File size          │  384 MB                 │
-   │  NDV(id)            │  1,247,893              │
-   │  NDV(amount)        │  42,567                 │
-   │  Min(amount)        │  0.01                   │
-   │  Max(amount)        │  99,999.99              │
-   │  Null count(amount) │  0                      │
+   │  Row count          │  1,247,893             │
+   │  File size          │  384 MB                │
+   │  NDV(id)            │  1,247,893             │
+   │  NDV(amount)        │  42,567                │
+   │  Min(amount)        │  0.01                  │
+   │  Max(amount)        │  99,999.99             │
+   │  Null count(amount) │  0                     │
    └──────────────────────────────────────────────┘
 2. Stores these stats in Hive Metastore
 3. Impala's optimizer uses them for:
