@@ -29,18 +29,17 @@ Each project follows these rules:
 ## 📂 Repository Structure
 
 - `database-migration-demo/` — The hands-on migration project.
-- `migration/` — Detailed documentation and theory about migration strategies (Impala, SQL, etc.).
 
 ---
 
 ## 🛠️ Getting Started
 
-Every project has its own `README.md` with specific setup instructions. Generally, you only need Python or Node.js installed.
+Every project has its own `README.md` with specific setup instructions.
 
 ```bash
 # Example: Running the Migration Demo
 cd database-migration-demo
-python3 main.py demo
+uv run main.py demo
 ```
 
 ---

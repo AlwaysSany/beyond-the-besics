@@ -28,14 +28,14 @@ Without Migrations:                With Migrations:
 cd database-migration-demo
 
 # Run the guided demo (recommended for first time!)
-python main.py demo
+uv run main.py demo
 
 # Or use individual commands:
-python main.py migrate    # Apply all pending migrations
-python main.py status     # See what's applied
-python main.py schema     # See current tables & columns
-python main.py rollback   # Undo the last migration
-python main.py reset      # Delete DB and start fresh
+uv run main.py migrate    # Apply all pending migrations
+uv run main.py status     # See what's applied
+uv run main.py schema     # See current tables & columns
+uv run main.py rollback   # Undo the last migration
+uv run main.py reset      # Delete DB and start fresh
 ```
 
 > **No dependencies required!** Uses only Python standard library (`sqlite3`).
@@ -115,7 +115,7 @@ def down(cursor):
     print("    🗑️  Dropped column: users.email_verified")
 ```
 
-3. Run `python main.py migrate` — only your new migration will run!
+3. Run `uv run main.py migrate` — only your new migration will run!
 
 ---
 
