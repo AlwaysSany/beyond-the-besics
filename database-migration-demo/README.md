@@ -1,4 +1,4 @@
-# Database Migration Demo 🗃️
+# Database Migration Demo
 
 A **hands-on mini project** that explains how database migrations work — from scratch, without Alembic or any ORM. Just Python + SQLite.
 
@@ -6,7 +6,7 @@ A **hands-on mini project** that explains how database migrations work — from 
 
 ---
 
-## 🤔 What Are Migrations?
+## What Are Migrations?
 
 Migrations are **version-controlled changes to your database schema**. Think of them like Git commits, but for your database structure instead of code.
 
@@ -150,7 +150,7 @@ def down(cursor):
 
 ---
 
-## 🆚 How This Compares to Real Tools
+## How This Compares to Real Tools
 
 | Feature | This Demo | Alembic | Django Migrations |
 |---------|-----------|---------|-------------------|

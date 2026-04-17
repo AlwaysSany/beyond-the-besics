@@ -6,7 +6,7 @@ A collection of **hands-on, high-quality mini projects** designed to explain com
 
 ---
 
-## 🏗️ Project Collection
+## Project Collection
 
 | Project | Concept | Language | Description |
 |:---|:---|:---|:---|
@@ -28,7 +28,7 @@ Each project follows these rules:
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 

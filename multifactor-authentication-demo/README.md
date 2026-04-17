@@ -1,4 +1,4 @@
-# Multi-Factor Authentication Demo 🔐
+# Multi-Factor Authentication Demo
 
 A **hands-on mini project** that explains how TOTP-based two-factor authentication works — implementing the same algorithm used by Google Authenticator, from scratch in Python.
 
@@ -6,7 +6,7 @@ A **hands-on mini project** that explains how TOTP-based two-factor authenticati
 
 ---
 
-## 🤔 What Is Multi-Factor Authentication?
+## What Is Multi-Factor Authentication?
 
 Multi-factor authentication (MFA) adds an extra layer of security beyond just a password. Instead of relying on _something you know_ alone, it requires a second factor — typically _something you have_ (like your phone).
 
@@ -14,7 +14,7 @@ The most common approach is **TOTP** (Time-Based One-Time Password), where an au
 
 ---
 
-## 📖 Theory: How Google Authenticator Works
+## Theory: How Google Authenticator Works
 
 Google Authenticator is a software-based authenticator developed by Google. It implements multi-step verification services using the **Time-Based One-Time Password (TOTP)** algorithm specified in [RFC 6238](https://datatracker.ietf.org/doc/html/rfc6238), which builds on the **HMAC-Based One-Time Password (HOTP)** algorithm from [RFC 4226](https://datatracker.ietf.org/doc/html/rfc4226).
 
@@ -279,7 +279,7 @@ This is an educational demo. In a production system, you'd want:
 
 ---
 
-## 🆚 How This Compares to Real Systems
+## How This Compares to Real Systems
 
 | Feature | This Demo | Google/GitHub 2FA | Enterprise IAM |
 |---------|-----------|-------------------|----------------|
