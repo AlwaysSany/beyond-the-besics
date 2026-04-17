@@ -23,10 +23,25 @@ Without Migrations:                With Migrations:
 
 ## 🚀 Quick Start
 
+### Prerequisites
+
+- Python 3.13+
+- [`uv`](https://docs.astral.sh/uv/) package manager
+
+### Setup (one-time)
+
 ```bash
 # Navigate to this project
 cd database-migration-demo
 
+# Create isolated virtual environment & install deps
+uv venv
+uv sync
+```
+
+### Run
+
+```bash
 # Run the guided demo (recommended for first time!)
 uv run main.py demo
 

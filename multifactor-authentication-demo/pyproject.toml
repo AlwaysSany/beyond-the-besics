@@ -1,0 +1,18 @@
+[project]
+name = "multifactor-authentication-demo"
+version = "1.0.0"
+description = "A hands-on TOTP/2FA demo implementing the same algorithm used by Google Authenticator"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0",
+    "python-multipart>=0.0.20",
+    "qrcode[pil]>=8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.28.0",
+    "pytest>=8.0",
+]

@@ -11,6 +11,7 @@ A collection of **hands-on, high-quality mini projects** designed to explain com
 | Project | Concept | Language | Description |
 |:---|:---|:---|:---|
 | [**Database Migration Demo**](./database-migration-demo) | **Schema Migrations** | Python | A from-scratch migration engine explaining `up()`, `down()`, and history tracking. |
+| [**Multi-Factor Authentication Demo**](./multifactor-authentication-demo) | **TOTP / 2FA** | Python | A from-scratch TOTP implementation (RFC 6238) with FastAPI 2FA endpoints and QR onboarding — compatible with Google Authenticator. |
 
 ---
 
@@ -23,24 +24,36 @@ Each project follows these rules:
 2. **Pedagogical:** Heavily commented code explaining *why* things are done.
 3. **Runnable:** Can be started in seconds with a single command.
 4. **Standalone:** Each folder is a complete, independent project.
+5. **Isolated:** Each project has its own `.venv` — no shared dependencies.
 
 ---
 
-## 📂 Repository Structure
+## 🚀 Getting Started
 
-- `database-migration-demo/` — The hands-on migration project.
+### Prerequisites
 
----
+- Python 3.13+
+- [`uv`](https://docs.astral.sh/uv/) — fast Python package manager
 
-## 🛠️ Getting Started
+### Run Any Project
 
-Every project has its own `README.md` with specific setup instructions.
+Every project follows the same setup pattern:
 
 ```bash
-# Example: Running the Migration Demo
-cd database-migration-demo
-uv run main.py demo
+# 1. Navigate into the project
+cd <project-name>
+
+# 2. Create an isolated virtual environment
+uv venv
+
+# 3. Install dependencies
+uv sync
+
+# 4. Run (see each project's README for specific commands)
+uv run main.py        # or uv run demo.py, etc.
 ```
+
+> Each project has its own `.venv` and `pyproject.toml`, keeping dependencies fully isolated between projects.
 
 ---
 
