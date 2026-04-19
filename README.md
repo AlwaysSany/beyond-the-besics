@@ -1,4 +1,4 @@
-# Beyond the Basics 🚀
+# Beyond the Basics
 
 A collection of **hands-on, high-quality mini projects** designed to explain complex backend, system design, and software engineering concepts simply and effectively.
 
