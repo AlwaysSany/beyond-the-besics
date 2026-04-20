@@ -1,5 +1,13 @@
 # Rate Limiter Demo — Token Bucket
 
+This is a simple rate limiter implementation using the token bucket algorithm.
+
+
+## Project Demo
+
+![Rate Limiter Demo](./rate-limiter-api-docs.png)
+
+
 > **Project 3** of the *Beyond the Basics* Python series.
 > Stack: Python 3.11 · FastAPI · `uv`
 

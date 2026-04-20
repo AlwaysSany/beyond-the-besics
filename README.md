@@ -12,6 +12,7 @@ A collection of **hands-on, high-quality mini projects** designed to explain com
 |:---|:---|:---|:---|
 | [**Database Migration Demo**](./database-migration-demo) | **Schema Migrations** | Python | A from-scratch migration engine explaining `up()`, `down()`, and history tracking. |
 | [**Multi-Factor Authentication Demo**](./multifactor-authentication-demo) | **TOTP / 2FA** | Python | A from-scratch TOTP implementation (RFC 6238) with FastAPI 2FA endpoints and QR onboarding — compatible with Google Authenticator. |
+| [**Rate Limiter Demo**](./rate-limiting) | **Token Bucket Algorithm** | Python | A complete token bucket rate limiter implemented as FastAPI middleware with per-route overrides, X-RateLimit-* headers, and stress testing. |
 
 ---
 
