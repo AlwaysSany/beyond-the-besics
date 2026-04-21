@@ -13,7 +13,7 @@ A collection of **hands-on, high-quality mini projects** designed to explain com
 | [**Database Migration**](./database-migration) | **Schema Migrations** | Python | A from-scratch migration engine explaining `up()`, `down()`, and history tracking. |
 | [**Multi-Factor Authentication**](./multifactor-authentication) | **TOTP / 2FA** | Python | A from-scratch TOTP implementation (RFC 6238) with FastAPI 2FA endpoints and QR onboarding — compatible with Google Authenticator. |
 | [**Rate Limiter**](./rate-limiting) | **Token Bucket Algorithm** | Python | A complete token bucket rate limiter implemented as FastAPI middleware with per-route overrides, X-RateLimit-* headers, and stress testing. |
-
+| [**App Scheduler**](./app-scheduler) | **Background Job Scheduling** | Python | A Flask-based scheduler with APScheduler, Gunicorn, and Kubernetes deployment examples. |
 ---
 
 ## 🎯 Purpose
