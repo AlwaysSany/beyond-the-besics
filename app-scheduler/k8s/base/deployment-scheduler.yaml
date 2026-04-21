@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-ap-scheduler-worker
+  labels:
+    app: flask-ap-scheduler
+    component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flask-ap-scheduler
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: flask-ap-scheduler
+        component: worker
+    spec:
+      containers:
+        - name: scheduler
+          image: flask-ap-scheduler:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: FLASK_ENV
+              value: "production"
+            - name: SCHEDULER_ENABLED
+              value: "1"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          command: ["python", "run_scheduler.py"]
+

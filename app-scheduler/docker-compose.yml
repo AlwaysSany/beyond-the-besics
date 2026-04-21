@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  web:
+    build: .
+    image: flask-ap-scheduler:latest
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_ENV: production
+      SCHEDULER_ENABLED: "0"
+    command: ["gunicorn", "-b", "0.0.0.0:5000", "wsgi:app"]
+
+  scheduler:
+    image: flask-ap-scheduler:latest
+    depends_on:
+      - web
+    environment:
+      FLASK_ENV: production
+      SCHEDULER_ENABLED: "1"
+    command: ["python", "run_scheduler.py"]

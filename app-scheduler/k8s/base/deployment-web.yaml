@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-ap-scheduler-web
+  labels:
+    app: flask-ap-scheduler
+    component: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flask-ap-scheduler
+      component: web
+  template:
+    metadata:
+      labels:
+        app: flask-ap-scheduler
+        component: web
+    spec:
+      containers:
+        - name: web
+          image: flask-ap-scheduler:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          env:
+            - name: FLASK_ENV
+              value: "production"
+            - name: SCHEDULER_ENABLED
+              value: "0"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          command: ["gunicorn", "-b", "0.0.0.0:5000", "wsgi:app"]
+

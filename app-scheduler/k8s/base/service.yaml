@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-ap-scheduler
+  labels:
+    app: flask-ap-scheduler
+spec:
+  selector:
+    app: flask-ap-scheduler
+    component: web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5000
+  type: ClusterIP
+

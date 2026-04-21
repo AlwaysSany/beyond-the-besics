@@ -1,0 +1,5 @@
+resources:
+  - deployment-web.yaml
+  - deployment-scheduler.yaml
+  - service.yaml
+
