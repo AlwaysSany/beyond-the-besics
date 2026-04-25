@@ -1,0 +1,175 @@
+{
+  "dark_mode": {
+    "enabled": true,
+    "flag_type": "release",
+    "description": "New dark mode UI toggle",
+    "target_users": [],
+    "target_groups": [],
+    "rule_groups": [],
+    "rollout_percentage": 100,
+    "variants": [],
+    "environments": [],
+    "tags": [
+      "ui",
+      "release-1.4"
+    ],
+    "created_at": 1777130399.471504,
+    "updated_at": 1777130399.471504
+  },
+  "new_dashboard": {
+    "enabled": true,
+    "flag_type": "release",
+    "description": "Revamped analytics dashboard \u2014 rolling out to 10% of users",
+    "target_users": [],
+    "target_groups": [],
+    "rule_groups": [],
+    "rollout_percentage": 10,
+    "variants": [],
+    "environments": [],
+    "tags": [
+      "analytics",
+      "dashboard"
+    ],
+    "created_at": 1777130399.471508,
+    "updated_at": 1777130399.471508
+  },
+  "checkout_experiment": {
+    "enabled": true,
+    "flag_type": "experiment",
+    "description": "A/B test on checkout CTA button color",
+    "target_users": [],
+    "target_groups": [],
+    "rule_groups": [],
+    "rollout_percentage": 100,
+    "variants": [
+      {
+        "name": "control",
+        "weight": 50,
+        "payload": {
+          "button_color": "#2563eb"
+        }
+      },
+      {
+        "name": "treatment",
+        "weight": 50,
+        "payload": {
+          "button_color": "#16a34a"
+        }
+      }
+    ],
+    "environments": [],
+    "tags": [
+      "checkout",
+      "ab-test"
+    ],
+    "created_at": 1777130446.6245031,
+    "updated_at": 1777130446.624504
+  },
+  "beta_export": {
+    "enabled": true,
+    "flag_type": "permission",
+    "description": "CSV export feature for beta users and enterprise plan",
+    "target_users": [],
+    "target_groups": [],
+    "rule_groups": [
+      {
+        "match_all": false,
+        "rules": [
+          {
+            "attribute": "plan",
+            "operator": "in",
+            "value": [
+              "enterprise"
+            ]
+          },
+          {
+            "attribute": "email",
+            "operator": "contains",
+            "value": "@beta.example.com"
+          }
+        ]
+      }
+    ],
+    "rollout_percentage": 100,
+    "variants": [],
+    "environments": [],
+    "tags": [
+      "export",
+      "beta"
+    ],
+    "created_at": 1777130399.4715211,
+    "updated_at": 1777130399.4715211
+  },
+  "payment_v2": {
+    "enabled": false,
+    "flag_type": "ops",
+    "description": "New Stripe payment integration. Enable when ready.",
+    "target_users": [],
+    "target_groups": [],
+    "rule_groups": [],
+    "rollout_percentage": 0,
+    "variants": [],
+    "environments": [],
+    "tags": [
+      "critical",
+      "payments"
+    ],
+    "created_at": 1777130399.471524,
+    "updated_at": 1777130399.4715252
+  },
+  "geo_restricted_feature": {
+    "enabled": true,
+    "flag_type": "permission",
+    "description": "Feature available only in US and CA",
+    "target_users": [],
+    "target_groups": [],
+    "rule_groups": [
+      {
+        "match_all": true,
+        "rules": [
+          {
+            "attribute": "country",
+            "operator": "in",
+            "value": [
+              "US",
+              "CA"
+            ]
+          }
+        ]
+      }
+    ],
+    "rollout_percentage": 100,
+    "variants": [],
+    "environments": [
+      "production"
+    ],
+    "tags": [
+      "geo",
+      "compliance"
+    ],
+    "created_at": 1777130399.47153,
+    "updated_at": 1777130399.47153
+  },
+  "datalake": {
+    "enabled": true,
+    "flag_type": "release",
+    "description": "Feature flag to enable datalake code",
+    "target_users": [
+      "user_007"
+    ],
+    "target_groups": [],
+    "rule_groups": [],
+    "rollout_percentage": 100,
+    "variants": [],
+    "environments": [
+      "uat",
+      "dev"
+    ],
+    "tags": [
+      "release",
+      "datalake"
+    ],
+    "created_at": 1777130553.284844,
+    "updated_at": 1777130553.284845
+  }
+}

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feature Flag Dashboard</title>
+  <meta name="description" content="Admin dashboard for managing feature flags — create, toggle, evaluate, and audit flags in real-time." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            surface: { 50: '#f8fafc', 100: '#f1f5f9', 700: '#1e293b', 800: '#0f172a', 900: '#020617' },
+            accent: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5' },
+            emerald: { 400: '#34d399', 500: '#10b981' },
+            rose: { 400: '#fb7185', 500: '#f43f5e' },
+            amber: { 400: '#fbbf24', 500: '#f59e0b' },
+            sky: { 400: '#38bdf8', 500: '#0ea5e9' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .glass { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(16px); border: 1px solid rgba(99, 102, 241, 0.15); }
+    .glass-light { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(12px); border: 1px solid rgba(148, 163, 184, 0.1); }
+    .gradient-border { background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(16,185,129,0.3)); padding: 1px; border-radius: 1rem; }
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    .slide-up { animation: slideUp 0.35s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .toggle-track { transition: background-color 0.2s ease; }
+    .toggle-thumb { transition: transform 0.2s ease; }
+    .badge { font-size: 0.65rem; letter-spacing: 0.05em; }
+    .btn-glow:hover { box-shadow: 0 0 20px rgba(99,102,241,0.4); }
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 4px; }
+    input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 2px rgba(99,102,241,0.5); }
+    .modal-overlay { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+    .pulse-dot { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .type-release { --tw-text-opacity: 1; color: rgb(99 102 241 / var(--tw-text-opacity)); background: rgba(99,102,241,0.15); }
+    .type-experiment { --tw-text-opacity: 1; color: rgb(251 191 36 / var(--tw-text-opacity)); background: rgba(251,191,36,0.15); }
+    .type-ops { --tw-text-opacity: 1; color: rgb(251 113 133 / var(--tw-text-opacity)); background: rgba(251,113,133,0.15); }
+    .type-permission { --tw-text-opacity: 1; color: rgb(52 211 153 / var(--tw-text-opacity)); background: rgba(52,211,153,0.15); }
+  </style>
+</head>
+<body class="bg-surface-900 text-slate-200 min-h-screen">
+
+  <!-- Background gradient blobs -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+    <div class="absolute -top-40 -right-40 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 glass border-b border-slate-700/50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-500 to-emerald-500 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold bg-gradient-to-r from-accent-400 to-emerald-400 bg-clip-text text-transparent">Feature Flags</h1>
+          <p class="text-xs text-slate-400">Admin Dashboard</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div id="health-indicator" class="flex items-center gap-2 text-xs text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-slate-500 pulse-dot" id="health-dot"></span>
+          <span id="health-text">Connecting…</span>
+        </div>
+        <button onclick="reloadFlags()" id="reload-btn" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700/60 hover:bg-slate-600/60 border border-slate-600/50 transition-all duration-200 flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          Reload
+        </button>
+        <button onclick="openCreateModal()" id="create-flag-btn" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-400 hover:to-accent-500 text-white transition-all duration-200 btn-glow flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+          New Flag
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Stats Bar -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="stats-bar">
+      <div class="glass-light rounded-xl p-4 text-center slide-up">
+        <div class="text-2xl font-bold text-white" id="stat-total">—</div>
+        <div class="text-xs text-slate-400 mt-1">Total Flags</div>
+      </div>
+      <div class="glass-light rounded-xl p-4 text-center slide-up" style="animation-delay:50ms">
+        <div class="text-2xl font-bold text-emerald-400" id="stat-enabled">—</div>
+        <div class="text-xs text-slate-400 mt-1">Enabled</div>
+      </div>
+      <div class="glass-light rounded-xl p-4 text-center slide-up" style="animation-delay:100ms">
+        <div class="text-2xl font-bold text-rose-400" id="stat-disabled">—</div>
+        <div class="text-xs text-slate-400 mt-1">Disabled</div>
+      </div>
+      <div class="glass-light rounded-xl p-4 text-center slide-up" style="animation-delay:150ms">
+        <div class="text-2xl font-bold text-amber-400" id="stat-experiments">—</div>
+        <div class="text-xs text-slate-400 mt-1">Experiments</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+    <!-- Filter Bar -->
+    <div class="flex flex-wrap items-center gap-3 mb-6">
+      <div class="flex items-center gap-2 flex-1 min-w-[200px]">
+        <div class="relative flex-1 max-w-sm">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <input type="text" id="search-input" placeholder="Search flags…" class="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-800/80 border border-slate-700/50 text-sm text-slate-200 placeholder-slate-500 transition-all duration-200" oninput="filterFlags()" />
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <select id="type-filter" class="px-3 py-2 rounded-lg bg-surface-800/80 border border-slate-700/50 text-sm text-slate-300 cursor-pointer" onchange="filterFlags()">
+          <option value="">All Types</option>
+          <option value="release">Release</option>
+          <option value="experiment">Experiment</option>
+          <option value="ops">Ops</option>
+          <option value="permission">Permission</option>
+        </select>
+        <select id="status-filter" class="px-3 py-2 rounded-lg bg-surface-800/80 border border-slate-700/50 text-sm text-slate-300 cursor-pointer" onchange="filterFlags()">
+          <option value="">All Status</option>
+          <option value="enabled">Enabled</option>
+          <option value="disabled">Disabled</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Flags Grid -->
+    <div id="flags-container" class="grid gap-4">
+      <div class="flex items-center justify-center py-20 text-slate-500">
+        <svg class="w-6 h-6 animate-spin mr-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        Loading flags…
+      </div>
+    </div>
+  </main>
+
+  <!-- Create / Edit Modal -->
+  <div id="create-modal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-overlay absolute inset-0" onclick="closeCreateModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="glass rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-thin slide-up">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg font-bold text-white" id="modal-title">Create New Flag</h2>
+            <button onclick="closeCreateModal()" class="p-1 rounded-lg hover:bg-slate-700/50 transition-colors">
+              <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <form id="flag-form" onsubmit="handleFlagSubmit(event)" class="space-y-4">
+            <input type="hidden" id="form-mode" value="create" />
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Flag Key *</label>
+              <input type="text" id="form-key" required pattern="[a-z0-9_]+" title="Lowercase letters, numbers, underscores only" placeholder="e.g. new_checkout_flow" class="w-full px-3 py-2 rounded-lg bg-surface-800 border border-slate-700/50 text-sm text-white placeholder-slate-500" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Description</label>
+              <textarea id="form-description" rows="2" placeholder="What does this flag control?" class="w-full px-3 py-2 rounded-lg bg-surface-800 border border-slate-700/50 text-sm text-white placeholder-slate-500 resize-none"></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1.5">Type</label>
+                <select id="form-type" class="w-full px-3 py-2 rounded-lg bg-surface-800 border border-slate-700/50 text-sm text-white">
+                  <option value="release">Release</option>
+                  <option value="experiment">Experiment</option>
+                  <option value="ops">Ops</option>
+                  <option value="permission">Permission</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1.5">Rollout %</label>
+                <input type="number" id="form-rollout" min="0" max="100" value="100" class="w-full px-3 py-2 rounded-lg bg-surface-800 border border-slate-700/50 text-sm text-white" />
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="form-enabled" class="sr-only peer" checked />
+                <div class="w-9 h-5 bg-slate-700 peer-focus:ring-2 peer-focus:ring-accent-500/30 rounded-full peer peer-checked:bg-emerald-500 transition-colors toggle-track"></div>
+                <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full peer-checked:translate-x-4 transition-transform toggle-thumb"></div>
+              </label>
+              <span class="text-sm text-slate-300">Enabled</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Tags <span class="text-slate-500">(comma separated)</span></label>
+              <input type="text" id="form-tags" placeholder="e.g. ui, beta, release-1.4" class="w-full px-3 py-2 rounded-lg bg-surface-800 border border-slate-700/50 text-sm text-white placeholder-slate-500" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Environments <span class="text-slate-500">(comma separated, leave empty for all)</span></label>
+              <input type="text" id="form-environments" placeholder="e.g. production, staging" class="w-full px-3 py-2 rounded-lg bg-surface-800 border border-slate-700/50 text-sm text-white placeholder-slate-500" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Target Users <span class="text-slate-500">(comma separated)</span></label>
+              <input type="text" id="form-target-users" placeholder="e.g. user_001, user_002" class="w-full px-3 py-2 rounded-lg bg-surface-800 border border-slate-700/50 text-sm text-white placeholder-slate-500" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Variants <span class="text-slate-500">(JSON array or leave empty)</span></label>
+              <textarea id="form-variants" rows="3" placeholder='[{"name":"control","weight":50,"payload":{}},{"name":"treatment","weight":50,"payload":{}}]' class="w-full px-3 py-2 rounded-lg bg-surface-800 border border-slate-700/50 text-sm text-white placeholder-slate-500 font-mono text-xs resize-none"></textarea>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+              <button type="submit" id="form-submit-btn" class="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-400 hover:to-accent-500 text-white transition-all duration-200 btn-glow">
+                Create Flag
+              </button>
+              <button type="button" onclick="closeCreateModal()" class="px-6 py-2.5 rounded-lg text-sm font-medium bg-slate-700/60 hover:bg-slate-600/60 border border-slate-600/50 text-slate-300 transition-all duration-200">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Evaluate Modal -->
+  <div id="eval-modal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-overlay absolute inset-0" onclick="closeEvalModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="glass rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-thin slide-up">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg font-bold text-white">Evaluate Flag: <span id="eval-flag-key" class="text-accent-400"></span></h2>
+            <button onclick="closeEvalModal()" class="p-1 rounded-lg hover:bg-slate-700/50 transition-colors">
+              <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <form onsubmit="handleEvalSubmit(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">User ID</label>
+              <input type="text" id="eval-user-id" placeholder="e.g. user_001" class="w-full px-3 py-2 rounded-lg bg-surface-800 border border-slate-700/50 text-sm text-white placeholder-slate-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Environment</label>
+              <input type="text" id="eval-environment" value="production" class="w-full px-3 py-2 rounded-lg bg-surface-800 border border-slate-700/50 text-sm text-white" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Groups <span class="text-slate-500">(comma separated)</span></label>
+              <input type="text" id="eval-groups" placeholder="e.g. beta_testers, enterprise" class="w-full px-3 py-2 rounded-lg bg-surface-800 border border-slate-700/50 text-sm text-white placeholder-slate-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Attributes <span class="text-slate-500">(JSON object)</span></label>
+              <textarea id="eval-attributes" rows="3" placeholder='{"plan": "pro", "country": "US"}' class="w-full px-3 py-2 rounded-lg bg-surface-800 border border-slate-700/50 text-sm text-white placeholder-slate-500 font-mono text-xs resize-none"></textarea>
+            </div>
+            <button type="submit" class="w-full py-2.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white transition-all duration-200">
+              ⚡ Evaluate
+            </button>
+          </form>
+          <div id="eval-result" class="mt-4 hidden">
+            <div class="h-px bg-slate-700/50 mb-4"></div>
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Evaluation Result</h3>
+            <div id="eval-result-content" class="glass-light rounded-xl p-4 font-mono text-xs space-y-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audit Modal -->
+  <div id="audit-modal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-overlay absolute inset-0" onclick="closeAuditModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="glass rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-thin slide-up">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg font-bold text-white">Audit Log: <span id="audit-flag-key" class="text-accent-400"></span></h2>
+            <button onclick="closeAuditModal()" class="p-1 rounded-lg hover:bg-slate-700/50 transition-colors">
+              <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div id="audit-content" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-2"></div>
+
+  <script>
+    // ── State ─────────────────────────────────────────────────────────────────
+    const API = '';
+    let allFlags = {};
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchFlags();
+      checkHealth();
+      setInterval(checkHealth, 15000);
+    });
+
+    // ── API Calls ────────────────────────────────────────────────────────────
+
+    async function fetchFlags() {
+      try {
+        const res = await fetch(`${API}/flags`);
+        const data = await res.json();
+        allFlags = data.flags || {};
+        renderFlags();
+        updateStats();
+      } catch (err) {
+        showToast('Failed to load flags', 'error');
+      }
+    }
+
+    async function checkHealth() {
+      try {
+        const res = await fetch(`${API}/health`);
+        const data = await res.json();
+        const dot = document.getElementById('health-dot');
+        const text = document.getElementById('health-text');
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-400 pulse-dot';
+        text.textContent = `${data.flag_count} flags · Online`;
+        text.className = 'text-emerald-400';
+      } catch {
+        const dot = document.getElementById('health-dot');
+        const text = document.getElementById('health-text');
+        dot.className = 'w-2 h-2 rounded-full bg-rose-400 pulse-dot';
+        text.textContent = 'Offline';
+        text.className = 'text-rose-400';
+      }
+    }
+
+    async function reloadFlags() {
+      try {
+        const btn = document.getElementById('reload-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Reloading…';
+        await fetch(`${API}/reload`, { method: 'POST' });
+        await fetchFlags();
+        showToast('Flags reloaded from store', 'success');
+      } catch (err) {
+        showToast('Reload failed', 'error');
+      } finally {
+        const btn = document.getElementById('reload-btn');
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Reload';
+      }
+    }
+
+    async function toggleFlag(key) {
+      const flag = allFlags[key];
+      if (!flag) return;
+      const updated = { ...flag, enabled: !flag.enabled };
+      try {
+        await fetch(`${API}/flags/${key}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated),
+        });
+        await fetchFlags();
+        showToast(`${key} ${updated.enabled ? 'enabled' : 'disabled'}`, updated.enabled ? 'success' : 'warning');
+      } catch (err) {
+        showToast('Toggle failed', 'error');
+      }
+    }
+
+    async function deleteFlag(key) {
+      if (!confirm(`Delete flag "${key}"? This cannot be undone.`)) return;
+      try {
+        await fetch(`${API}/flags/${key}`, { method: 'DELETE' });
+        await fetchFlags();
+        showToast(`${key} deleted`, 'success');
+      } catch (err) {
+        showToast('Delete failed', 'error');
+      }
+    }
+
+    // ── Rendering ────────────────────────────────────────────────────────────
+
+    function updateStats() {
+      const flags = Object.values(allFlags);
+      document.getElementById('stat-total').textContent = flags.length;
+      document.getElementById('stat-enabled').textContent = flags.filter(f => f.enabled).length;
+      document.getElementById('stat-disabled').textContent = flags.filter(f => !f.enabled).length;
+      document.getElementById('stat-experiments').textContent = flags.filter(f => f.flag_type === 'experiment').length;
+    }
+
+    function filterFlags() {
+      const search = document.getElementById('search-input').value.toLowerCase();
+      const typeFilter = document.getElementById('type-filter').value;
+      const statusFilter = document.getElementById('status-filter').value;
+
+      const container = document.getElementById('flags-container');
+      const cards = container.querySelectorAll('[data-flag-key]');
+      cards.forEach(card => {
+        const key = card.dataset.flagKey;
+        const flag = allFlags[key];
+        if (!flag) return;
+
+        const matchesSearch = key.includes(search) || (flag.description || '').toLowerCase().includes(search) || (flag.tags || []).some(t => t.includes(search));
+        const matchesType = !typeFilter || flag.flag_type === typeFilter;
+        const matchesStatus = !statusFilter || (statusFilter === 'enabled' ? flag.enabled : !flag.enabled);
+
+        card.style.display = matchesSearch && matchesType && matchesStatus ? '' : 'none';
+      });
+    }
+
+    function renderFlags() {
+      const container = document.getElementById('flags-container');
+      const keys = Object.keys(allFlags).sort();
+
+      if (keys.length === 0) {
+        container.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-20 text-slate-500">
+            <svg class="w-12 h-12 mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
+            <p class="text-sm font-medium">No flags configured</p>
+            <p class="text-xs mt-1">Create your first feature flag to get started.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = keys.map((key, i) => {
+        const f = allFlags[key];
+        const typeClass = `type-${f.flag_type}`;
+        const typeLabel = f.flag_type.charAt(0).toUpperCase() + f.flag_type.slice(1);
+        const tags = (f.tags || []).slice(0, 4);
+        const hasVariants = f.variants && f.variants.length > 0;
+        const hasRules = f.rule_groups && f.rule_groups.length > 0;
+
+        return `
+          <div data-flag-key="${key}" class="glass-light rounded-xl p-5 hover:border-accent-500/30 transition-all duration-300 fade-in" style="animation-delay:${i * 40}ms">
+            <div class="flex items-start justify-between gap-4">
+              <!-- Left: Info -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2.5 mb-2 flex-wrap">
+                  <h3 class="text-sm font-bold text-white font-mono tracking-tight">${key}</h3>
+                  <span class="badge px-2 py-0.5 rounded-full font-semibold uppercase ${typeClass}">${typeLabel}</span>
+                  ${hasVariants ? '<span class="badge px-2 py-0.5 rounded-full font-semibold uppercase text-amber-400 bg-amber-400/15">A/B</span>' : ''}
+                  ${hasRules ? '<span class="badge px-2 py-0.5 rounded-full font-semibold uppercase text-sky-400 bg-sky-400/15">Rules</span>' : ''}
+                </div>
+                <p class="text-xs text-slate-400 mb-3 line-clamp-2">${f.description || 'No description'}</p>
+                <div class="flex items-center gap-3 flex-wrap">
+                  <!-- Rollout bar -->
+                  <div class="flex items-center gap-2">
+                    <div class="w-20 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                      <div class="h-full rounded-full transition-all duration-500 ${f.enabled ? 'bg-gradient-to-r from-accent-500 to-emerald-500' : 'bg-slate-600'}" style="width:${f.rollout_percentage}%"></div>
+                    </div>
+                    <span class="text-xs text-slate-400">${f.rollout_percentage}%</span>
+                  </div>
+                  <!-- Tags -->
+                  ${tags.map(t => `<span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-700/60 text-slate-400">${t}</span>`).join('')}
+                  ${f.environments && f.environments.length > 0 ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-400">📍 ${f.environments.join(', ')}</span>` : ''}
+                </div>
+                ${hasVariants ? `
+                  <div class="mt-3 flex items-center gap-2">
+                    ${f.variants.map(v => `
+                      <div class="flex items-center gap-1.5 text-[10px]">
+                        <div class="w-1.5 h-1.5 rounded-full ${v.name === 'control' ? 'bg-sky-400' : 'bg-amber-400'}"></div>
+                        <span class="text-slate-400">${v.name} <span class="text-slate-500">(${v.weight}%)</span></span>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : ''}
+              </div>
+              <!-- Right: Actions -->
+              <div class="flex items-center gap-2 shrink-0">
+                <!-- Toggle -->
+                <button onclick="toggleFlag('${key}')" id="toggle-${key}" class="relative inline-flex items-center cursor-pointer" title="${f.enabled ? 'Disable' : 'Enable'} flag">
+                  <div class="w-10 h-5 rounded-full transition-colors duration-200 ${f.enabled ? 'bg-emerald-500' : 'bg-slate-600'}"></div>
+                  <div class="absolute w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${f.enabled ? 'translate-x-[22px]' : 'translate-x-[3px]'}"></div>
+                </button>
+                <!-- Evaluate -->
+                <button onclick="openEvalModal('${key}')" id="eval-btn-${key}" class="p-2 rounded-lg hover:bg-accent-500/15 text-slate-400 hover:text-accent-400 transition-all" title="Evaluate">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </button>
+                <!-- Audit -->
+                <button onclick="openAuditModal('${key}')" id="audit-btn-${key}" class="p-2 rounded-lg hover:bg-sky-500/15 text-slate-400 hover:text-sky-400 transition-all" title="Audit log">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                </button>
+                <!-- Edit -->
+                <button onclick="openEditModal('${key}')" id="edit-btn-${key}" class="p-2 rounded-lg hover:bg-amber-500/15 text-slate-400 hover:text-amber-400 transition-all" title="Edit">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                </button>
+                <!-- Delete -->
+                <button onclick="deleteFlag('${key}')" id="delete-btn-${key}" class="p-2 rounded-lg hover:bg-rose-500/15 text-slate-400 hover:text-rose-400 transition-all" title="Delete">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ── Create / Edit Modal ──────────────────────────────────────────────────
+
+    function openCreateModal() {
+      document.getElementById('form-mode').value = 'create';
+      document.getElementById('modal-title').textContent = 'Create New Flag';
+      document.getElementById('form-submit-btn').textContent = 'Create Flag';
+      document.getElementById('form-key').value = '';
+      document.getElementById('form-key').disabled = false;
+      document.getElementById('form-description').value = '';
+      document.getElementById('form-type').value = 'release';
+      document.getElementById('form-rollout').value = '100';
+      document.getElementById('form-enabled').checked = false;
+      document.getElementById('form-tags').value = '';
+      document.getElementById('form-environments').value = '';
+      document.getElementById('form-target-users').value = '';
+      document.getElementById('form-variants').value = '';
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function openEditModal(key) {
+      const flag = allFlags[key];
+      if (!flag) return;
+      document.getElementById('form-mode').value = 'edit';
+      document.getElementById('modal-title').textContent = `Edit: ${key}`;
+      document.getElementById('form-submit-btn').textContent = 'Update Flag';
+      document.getElementById('form-key').value = key;
+      document.getElementById('form-key').disabled = true;
+      document.getElementById('form-description').value = flag.description || '';
+      document.getElementById('form-type').value = flag.flag_type;
+      document.getElementById('form-rollout').value = flag.rollout_percentage;
+      document.getElementById('form-enabled').checked = flag.enabled;
+      document.getElementById('form-tags').value = (flag.tags || []).join(', ');
+      document.getElementById('form-environments').value = (flag.environments || []).join(', ');
+      document.getElementById('form-target-users').value = (flag.target_users || []).join(', ');
+      document.getElementById('form-variants').value = flag.variants && flag.variants.length > 0
+        ? JSON.stringify(flag.variants, null, 2) : '';
+      document.getElementById('create-modal').classList.remove('hidden');
+    }
+
+    function closeCreateModal() {
+      document.getElementById('create-modal').classList.add('hidden');
+    }
+
+    async function handleFlagSubmit(e) {
+      e.preventDefault();
+      const mode = document.getElementById('form-mode').value;
+      const key = document.getElementById('form-key').value.trim();
+
+      let variants = [];
+      const variantsRaw = document.getElementById('form-variants').value.trim();
+      if (variantsRaw) {
+        try { variants = JSON.parse(variantsRaw); } catch { showToast('Invalid variants JSON', 'error'); return; }
+      }
+
+      const body = {
+        key,
+        enabled: document.getElementById('form-enabled').checked,
+        flag_type: document.getElementById('form-type').value,
+        description: document.getElementById('form-description').value.trim(),
+        rollout_percentage: parseInt(document.getElementById('form-rollout').value) || 100,
+        tags: document.getElementById('form-tags').value.split(',').map(s => s.trim()).filter(Boolean),
+        environments: document.getElementById('form-environments').value.split(',').map(s => s.trim()).filter(Boolean),
+        target_users: document.getElementById('form-target-users').value.split(',').map(s => s.trim()).filter(Boolean),
+        target_groups: [],
+        rule_groups: allFlags[key]?.rule_groups || [],
+        variants,
+      };
+
+      try {
+        const url = mode === 'create' ? `${API}/flags` : `${API}/flags/${key}`;
+        const method = mode === 'create' ? 'POST' : 'PUT';
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Request failed');
+        }
+        closeCreateModal();
+        await fetchFlags();
+        showToast(`${key} ${mode === 'create' ? 'created' : 'updated'}`, 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // ── Evaluate Modal ───────────────────────────────────────────────────────
+
+    function openEvalModal(key) {
+      document.getElementById('eval-flag-key').textContent = key;
+      document.getElementById('eval-user-id').value = '';
+      document.getElementById('eval-environment').value = 'production';
+      document.getElementById('eval-groups').value = '';
+      document.getElementById('eval-attributes').value = '';
+      document.getElementById('eval-result').classList.add('hidden');
+      document.getElementById('eval-modal').classList.remove('hidden');
+    }
+
+    function closeEvalModal() {
+      document.getElementById('eval-modal').classList.add('hidden');
+    }
+
+    async function handleEvalSubmit(e) {
+      e.preventDefault();
+      const key = document.getElementById('eval-flag-key').textContent;
+      let attributes = {};
+      const attrRaw = document.getElementById('eval-attributes').value.trim();
+      if (attrRaw) {
+        try { attributes = JSON.parse(attrRaw); } catch { showToast('Invalid attributes JSON', 'error'); return; }
+      }
+
+      const body = {
+        user_id: document.getElementById('eval-user-id').value.trim() || null,
+        environment: document.getElementById('eval-environment').value.trim() || 'production',
+        groups: document.getElementById('eval-groups').value.split(',').map(s => s.trim()).filter(Boolean),
+        attributes,
+      };
+
+      try {
+        const res = await fetch(`${API}/flags/${key}/eval`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error((await res.json()).detail);
+        const result = await res.json();
+        const resultDiv = document.getElementById('eval-result');
+        const content = document.getElementById('eval-result-content');
+        resultDiv.classList.remove('hidden');
+
+        const enabledColor = result.enabled ? 'text-emerald-400' : 'text-rose-400';
+        const enabledIcon = result.enabled ? '✅' : '❌';
+
+        content.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Enabled</span>
+            <span class="${enabledColor} font-semibold">${enabledIcon} ${result.enabled}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Reason</span>
+            <span class="text-white">${result.reason}</span>
+          </div>
+          ${result.variant ? `
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Variant</span>
+            <span class="text-amber-400 font-semibold">${result.variant}</span>
+          </div>` : ''}
+          ${result.payload && Object.keys(result.payload).length > 0 ? `
+          <div>
+            <span class="text-slate-400">Payload</span>
+            <pre class="mt-1 text-accent-400 bg-surface-900/50 rounded p-2 overflow-x-auto">${JSON.stringify(result.payload, null, 2)}</pre>
+          </div>` : ''}
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Eval Time</span>
+            <span class="text-slate-300">${result.evaluation_time_us.toFixed(1)} µs</span>
+          </div>
+        `;
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // ── Audit Modal ──────────────────────────────────────────────────────────
+
+    async function openAuditModal(key) {
+      document.getElementById('audit-flag-key').textContent = key;
+      document.getElementById('audit-content').innerHTML = '<p class="text-sm text-slate-500 text-center py-8">Loading…</p>';
+      document.getElementById('audit-modal').classList.remove('hidden');
+
+      try {
+        const res = await fetch(`${API}/flags/${key}/audit`);
+        if (!res.ok) throw new Error('Failed to load audit');
+        const data = await res.json();
+        const entries = data.evaluations || [];
+        const content = document.getElementById('audit-content');
+
+        if (entries.length === 0) {
+          content.innerHTML = '<p class="text-sm text-slate-500 text-center py-8">No evaluations yet. Try evaluating this flag first.</p>';
+          return;
+        }
+
+        content.innerHTML = entries.map((e, i) => `
+          <div class="glass-light rounded-lg p-3 text-xs space-y-1 fade-in" style="animation-delay:${i * 30}ms">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold ${e.enabled ? 'text-emerald-400' : 'text-rose-400'}">${e.enabled ? '✅ ON' : '❌ OFF'}</span>
+              <span class="text-slate-500">${e.evaluation_time_us.toFixed(1)} µs</span>
+            </div>
+            <div class="text-slate-400">Reason: <span class="text-white">${e.reason}</span></div>
+            ${e.variant ? `<div class="text-slate-400">Variant: <span class="text-amber-400">${e.variant}</span></div>` : ''}
+          </div>
+        `).join('');
+      } catch (err) {
+        document.getElementById('audit-content').innerHTML = `<p class="text-sm text-rose-400 text-center py-8">${err.message}</p>`;
+      }
+    }
+
+    function closeAuditModal() {
+      document.getElementById('audit-modal').classList.add('hidden');
+    }
+
+    // ── Toast Notifications ──────────────────────────────────────────────────
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const colors = {
+        success: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300',
+        error: 'bg-rose-500/20 border-rose-500/40 text-rose-300',
+        warning: 'bg-amber-500/20 border-amber-500/40 text-amber-300',
+        info: 'bg-accent-500/20 border-accent-500/40 text-accent-300',
+      };
+      const icons = {
+        success: '✓',
+        error: '✗',
+        warning: '⚠',
+        info: 'ℹ',
+      };
+      const toast = document.createElement('div');
+      toast.className = `px-4 py-3 rounded-xl border text-sm font-medium flex items-center gap-2 slide-up ${colors[type] || colors.info}`;
+      toast.innerHTML = `<span class="text-base">${icons[type] || icons.info}</span> ${message}`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(8px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
