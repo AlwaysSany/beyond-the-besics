@@ -203,6 +203,9 @@ INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
 INFO:     Loaded 6 flags
 ```
 
+![Backend](./backend-api.png)
+
+
 ### 2. Open the Web Dashboard
 
 Open your browser and navigate to:
@@ -212,6 +215,8 @@ http://localhost:8080
 ```
 
 The admin dashboard loads automatically — you can manage flags, evaluate them, and view audit logs right from the browser.
+
+[Frontend](./frontend-ui.png)
 
 ### 3. Run the CLI Demo
 
