@@ -216,7 +216,7 @@ http://localhost:8080
 
 The admin dashboard loads automatically — you can manage flags, evaluate them, and view audit logs right from the browser.
 
-[Frontend](./frontend-ui.png)
+![Frontend](./frontend-ui.png)
 
 ### 3. Run the CLI Demo
 
