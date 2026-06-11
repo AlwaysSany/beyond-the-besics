@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Bash(uv:*)",
+      "Bash(uvx:*)",
+      "Bash(pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(mypy:*)",
+      "Bash(bandit:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(alembic:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(rg:*)",
+      "Bash(grep:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(tree:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git stash list:*)"
+    ],
+    "deny": [
+      "Read(./**/.env)",
+      "Read(./**/.env.*)",
+      "Read(./**/*.db)",
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(docker:*)",
+      "Bash(kubectl:*)"
+    ],
+    "defaultMode": "default"
+  },
+  "enabledMcpjsonServers": ["playwright"],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/ruff-format.sh",
+            "statusMessage": "Formatting with ruff"
+          }
+        ]
+      }
+    ]
+  }
+}

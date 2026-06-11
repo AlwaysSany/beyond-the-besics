@@ -208,3 +208,9 @@ marimo/_lsp/
 __marimo__/
 .python-version
 .DS_Store
+
+# Claude Code
+#  Commit shared config (.claude/settings.json, commands, agents, skills, hooks,
+#  and .mcp.json). Keep personal/local overrides and runtime state out of git.
+.claude/settings.local.json
+.claude/.credentials.json
