@@ -1,6 +1,6 @@
 ---
-description: Scaffold a new "Beyond the Basics" mini-project that teaches one backend/system-design concept from scratch.
-argument-hint: "[concept-name] (e.g. circuit-breaker, distributed-lock)"
+name: new-miniproject
+description: Scaffold a new "Beyond the Basics" mini-project that teaches one backend/system-design concept from scratch. Use whenever the user wants to add a new mini-project, microservice, or standalone concept demo to this repo — they supply a topic name and an optional brief, and this builds the standalone, runnable, heavily-commented project in the repo's house style.
 allowed-tools: Read, Write, Edit, Bash(uv:*), Bash(ls:*), Bash(find:*)
 ---
 
@@ -16,9 +16,13 @@ This repo is a collection of **standalone, pedagogical** mini-projects. Each one
 4. **Standalone** — the folder is a complete, independent project.
 5. **Isolated** — its own `.venv` and `pyproject.toml`. No shared deps.
 
+## Input
+
+The trigger is a concept to build. It may be just a name (`circuit-breaker`) or a name plus a free-form brief separated by `—`, `-`, `:` or a newline (`circuit-breaker — trip after N failures, half-open probe, per-endpoint state`). Treat everything after the separator as the brief: the behavior to demonstrate, edge cases to cover, and any deps the user wants. Use it instead of asking — only fall back to the clarifying question in Step 1 if no usable brief was given.
+
 ## Steps
 
-1. **Clarify the concept** (one question if unclear): what single concept does this teach, and what's the simplest runnable artifact that demonstrates it (CLI demo, FastAPI endpoints, a from-scratch engine)?
+1. **Clarify the concept** — only if no brief was supplied. Ask one question: what single concept does this teach, and what's the simplest runnable artifact that demonstrates it (CLI demo, FastAPI endpoints, a from-scratch engine)? If a brief was given, skip the question and proceed.
 
 2. **Pick a kebab-case folder name** matching the existing style (`rate-limiting`, `feature-flag`, `multifactor-authentication`). Confirm it doesn't already exist.
 

@@ -14,7 +14,7 @@ Everything here except `settings.local.json` is committed and shared with the te
 | `hooks/ruff-format.sh` | PostToolUse hook: auto-runs `ruff format` + `ruff check --fix` on every Python file Claude edits. |
 | `commands/` | Slash commands: `/gate` (full quality gate), `/run-project` (start an app). |
 | `agents/` | Subagents: `test-runner`, `security-auditor`. |
-| `skills/new-miniproject/` | Skill for scaffolding a new mini-project in the house style. |
+| `skills/new-miniproject/SKILL.md` | Skill for scaffolding a new mini-project in the house style. Claude can auto-invoke it when you describe a new concept; you can also trigger it with `/new-miniproject`. |
 
 ## Conventions
 
